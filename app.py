@@ -17,6 +17,14 @@ class Employee(db.Model):
     email       = db.Column(db.String(120), unique=True) # Add Nullable = False later during Migration
     company     = db.Column(db.String(100))
 
+    def to_dict(self):
+        return {
+            "id" : self.id,
+            "name" : self.name,
+            "email" : self.email,
+            "company" : self.company
+        }
+
     def __repr__(self):
         return f"<Employee {self.name}>"
 
@@ -27,14 +35,7 @@ def index():
 @app.route("/employee", methods=["GET"])
 def get_all_employees():
     employees = Employee.query.all()
-    return jsonify([
-        {
-            "id": e.id,
-            "name": e.name,
-            "email": e.email,
-            "company": e.company
-        } for e in employees
-    ]), 200
+    return jsonify([e.to_dict() for e in employees]), 200
 
 @app.route("/employee", methods=["POST"])
 def add_employee():
@@ -54,23 +55,13 @@ def add_employee():
     db.session.add(employee)
     db.session.commit()
 
-    return jsonify({
-        "id": employee.id,
-        "name": employee.name,
-        "email": employee.email,
-        "company": employee.company
-    }), 201
+    return jsonify(employee.to_dict()), 201
 
 @app.route("/employee/<int:id>", methods=["GET"])
 def get_employee_by_id(id):
     employee = Employee.query.get_or_404(id)
     
-    return jsonify({
-        "id": employee.id,
-        "name": employee.name,
-        "email": employee.email,
-        "company": employee.company
-    }), 200
+    return jsonify(employee.to_dict()), 200
 
 @app.route("/employee/<int:id>", methods=["PUT"])
 def update_employee(id):
@@ -93,12 +84,7 @@ def update_employee(id):
     employee.company = company
 
     db.session.commit()
-    return jsonify({
-        "id": employee.id,
-        "name": employee.name,
-        "email": employee.email,
-        "company": employee.company
-    }), 200
+    return jsonify(employee.to_dict()), 200
 
 @app.route("/employee/<int:id>", methods=["PATCH"])
 def partial_update_employee(id):
@@ -114,12 +100,7 @@ def partial_update_employee(id):
         employee.company = data["company"]
 
     db.session.commit()
-    return jsonify({
-        "id": employee.id,
-        "name": employee.name,
-        "email": employee.email,
-        "company": employee.company
-    }), 200
+    return jsonify(employee.to_dict()), 200
 
 @app.route("/employee/<int:id>", methods=["DELETE"])
 def delete_employee(id):
