@@ -1,6 +1,6 @@
 from flask import Flask, render_template
 from extensions import db
-from routes import employee_bp
+from routes import employee_bp, chat_bp
 import os
 
 def create_app():
@@ -9,6 +9,7 @@ def create_app():
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     db.init_app(app)
     app.register_blueprint(employee_bp)
+    app.register_blueprint(chat_bp)
 
     @app.route("/")
     def index():
@@ -19,7 +20,7 @@ def create_app():
 
 def main():
     app = create_app()
-    
+
     # Create tables if they don't exist
     with app.app_context():
         db.create_all()
