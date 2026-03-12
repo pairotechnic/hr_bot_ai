@@ -1,15 +1,15 @@
-from extensions import db
+from extensions import postgres_db
 from datetime import datetime
 
-class HRDocument(db.Model):
+class HRDocument(postgres_db.Model):
     __tablename__ = "hr_document"
 
-    id = db.Column(db.Integer, primary_key=True)
-    filename = db.Column(db.String(255), nullable=False)
-    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
-    chunk_count = db.Column(db.Integer, default=0)
-    es_index = db.Column(db.String(100), default="hr_documents")
-    status = db.Column(db.String(50), default="processed")
+    id = postgres_db.Column(postgres_db.Integer, primary_key=True)
+    filename = postgres_db.Column(postgres_db.String(255), nullable=False)
+    uploaded_at = postgres_db.Column(postgres_db.DateTime, default=datetime.utcnow)
+    chunk_count = postgres_db.Column(postgres_db.Integer, default=0)
+    es_index = postgres_db.Column(postgres_db.String(100), default="hr_documents")
+    status = postgres_db.Column(postgres_db.String(50), default="processed")
 
     def to_dict(self):
         return {

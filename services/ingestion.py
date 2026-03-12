@@ -6,7 +6,7 @@ from pypdf import PdfReader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 # Local Application Imports
-from extensions import db, get_vector_store
+from extensions import postgres_db, get_vector_store
 from models import HRDocument
 
 ES_INDEX = "hr_documents"
@@ -45,11 +45,11 @@ def ingest_document(file_path: str, filename: str) -> HRDocument:
             es_index=ES_INDEX,
             status="processed"
         )
-        db.session.add(doc)
-        db.session.commit()
+        postgres_db.session.add(doc)
+        postgres_db.session.commit()
         return doc
     except Exception as e:
-        db.session.rollback()
+        postgres_db.session.rollback()
         raise RuntimeError(f"Ingestion failed : {str(e)}")
     
     

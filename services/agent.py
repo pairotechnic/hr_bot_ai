@@ -45,7 +45,7 @@ Decision guide for tool use:
 Always be professional, empathetic, and concise.
 """
 
-def ask_agent(query):
+def ask_agent(query: str, history: list = None) -> dict:
     try :
         print("entered ask_agent")
         tools = [
@@ -60,20 +60,18 @@ def ask_agent(query):
             system_prompt=SYSTEM_PROMPT
         )
 
+        # Prepend history to give the agent full conversation context
+        messages = (history or []) + [{"role": "user", "content": query}]
+
         response = agent.invoke({
-            "messages" : [
-                {
-                    "role" : "user",
-                    "content" : query
-                }
-            ]
+            "messages" : messages
         })
 
         print(json.dumps(response, indent=4, default=dict))
 
-        messages = response.get("messages", [])
-        if messages : 
-            last_message = messages[-1]
+        agent_messages = response.get("messages", [])
+        if agent_messages : 
+            last_message = agent_messages[-1]
             content = getattr(last_message, "content", None) or last_message.get("content", "")
             return {"response": content}
         

@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from sqlalchemy.exc import IntegrityError
-from extensions import db
+from extensions import postgres_db
 from models import Employee
 
 employee_bp = Blueprint("employee", __name__, url_prefix="/employee")
@@ -35,12 +35,12 @@ def add_employee():
     # Later we will add input validation for company as well, when testing migration
     
     employee = Employee(name=name, email=email, company=company) 
-    db.session.add(employee)
+    postgres_db.session.add(employee)
 
     try :
-        db.session.commit()
+        postgres_db.session.commit()
     except IntegrityError :
-        db.session.rollback()
+        postgres_db.session.rollback()
         return jsonify({"error" : "email already exists"}), 409
 
     return jsonify(employee.to_dict()), 201
@@ -70,9 +70,9 @@ def update_employee(id):
     employee.company = company
 
     try :
-        db.session.commit()
+        postgres_db.session.commit()
     except IntegrityError :
-        db.session.rollback()
+        postgres_db.session.rollback()
         return jsonify({"error" : "email already exists"}), 409
     
     return jsonify(employee.to_dict()), 200
@@ -94,9 +94,9 @@ def partial_update_employee(id):
         employee.company = data["company"].strip()
 
     try :
-        db.session.commit()
+        postgres_db.session.commit()
     except IntegrityError :
-        db.session.rollback()
+        postgres_db.session.rollback()
         return jsonify({"error" : "email already exists"}), 409
     
     return jsonify(employee.to_dict()), 200
@@ -104,8 +104,8 @@ def partial_update_employee(id):
 @employee_bp.route("/<int:id>", methods=["DELETE"])
 def delete_employee(id):
     employee = Employee.query.get_or_404(id)
-    db.session.delete(employee)
-    db.session.commit()
+    postgres_db.session.delete(employee)
+    postgres_db.session.commit()
     return jsonify({
         "message": f"Employee {id} deleted"
     }), 200

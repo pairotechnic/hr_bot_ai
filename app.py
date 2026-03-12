@@ -1,13 +1,19 @@
-from flask import Flask, render_template
-from extensions import db
-from routes import employee_bp, chat_bp, rag_bp
+# Standard Library Imports
 import os
+
+# Third-Party Library Imports
+from flask import Flask, render_template
+
+# Local Appliation Imports
+from extensions import postgres_db, init_mongo
+from routes import employee_bp, chat_bp, rag_bp
 
 def create_app():
     app = Flask(__name__)
     app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("SQL_DATABASE_URI")
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-    db.init_app(app)
+    postgres_db.init_app(app)
+    init_mongo()
     app.register_blueprint(employee_bp)
     app.register_blueprint(chat_bp)
     app.register_blueprint(rag_bp)
@@ -24,7 +30,7 @@ def main():
 
     # Create tables if they don't exist
     with app.app_context():
-        db.create_all()
+        postgres_db.create_all()
         print("Tables created...")
     
     # Run the flask app

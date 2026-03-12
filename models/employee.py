@@ -1,12 +1,12 @@
-from extensions import db
+from extensions import postgres_db
 
-class Employee(db.Model):
+class Employee(postgres_db.Model):
     __tablename__ = "employee"
     
-    id          = db.Column(db.Integer, primary_key=True)
-    name        = db.Column(db.String(100), nullable=False)
-    email       = db.Column(db.String(120), unique=True) # Add Nullable = False later during Migration
-    company     = db.Column(db.String(100))
+    id          = postgres_db.Column(postgres_db.Integer, primary_key=True)
+    name        = postgres_db.Column(postgres_db.String(100), nullable=False)
+    email       = postgres_db.Column(postgres_db.String(120), unique=True) # Add Nullable = False later during Migration
+    company     = postgres_db.Column(postgres_db.String(100))
 
     def to_dict(self):
         return {

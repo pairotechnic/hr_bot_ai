@@ -8,7 +8,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 
 # Local Application Imports
-from extensions import db, get_vector_store
+from extensions import get_vector_store
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
