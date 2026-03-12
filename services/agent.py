@@ -1,78 +1,86 @@
 # Standard Library Imports
 import json
+import os
 
 # Third-Party Library Imports
 from langchain.agents import create_agent
+from langchain_openai import ChatOpenAI
 from pydantic import BaseModel
 
 # Local Application Imports
 from tools.search_tools import duck_duck_go_search_tool, wiki_search_tool
 from tools.custom_tools import save_text_to_file_tool
+from tools.rag_tools import hr_document_search_tool
 
-model = "gpt-5-nano"
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
-class ResponseFormat(BaseModel):
-    query: str
-    topic: str
-    summary: str
-    sources: list[str]
-    tools_used: list[str]
+# Instantiate the model explicitly — required for reliable tool use
+# Do NOT use response_format here: combining tools + structured output in
+# LangChain 1.x causes known recursion/conflict issues (ToolStrategy conflict).
+llm = ChatOpenAI(
+    model="gpt-5-nano", 
+    api_key=OPENAI_API_KEY, 
+    temperature=0,
+    max_retries=2
+)
+
+SYSTEM_PROMPT = """
+You are an HR automation assistant for an enterprise company.
+You help employees with HR-related needs including:
+- HR policies, benefits, and procedures (use the hr_document_search_tool)
+- Open enrollment, onboarding, leave of absence, compensation questions
+- General knowledge or background information (use wiki_search_tool)
+- Current events or information not in HR documents (use duck_duck_go_search_tool)
+- Saving research summaries when asked (use save_text_to_file_tool)
+
+Decision guide for tool use:
+1. If the question is about THIS company's HR policies, benefits, or procedures
+   -> Always use hr_document_search_tool first
+2. If the question requires general knowledge or definitions
+   -> Use wiki_search_tool
+3. If the question requires current/recent information
+   -> Use duck_duck_go_search_tool
+4. If HR documents don't have the answer, say so clearly and suggest contacting HR directly.
+
+Always be professional, empathetic, and concise.
+"""
 
 def ask_agent(query):
-    tools = [duck_duck_go_search_tool, wiki_search_tool, save_text_to_file_tool]
-    agent = create_agent(
-        model=model,
-        tools=tools,
-        response_format=ResponseFormat,
-        # TODO : Update this prompt to reflect the intended behaviour of the agent
-        system_prompt="""
-            You are an HR automation bot.
-            You automate critical HR functions, including support, open enrollment, onboarding, leave of absence, compensation.
-            You execute processes and workflows, streamline HR operations, and deliver employees the help they need instantly and conversationally
-            Answer the user query and use necessary tools.
-        """
-    )
-    
-    stream = agent.stream(
-        {
+    try :
+        print("entered ask_agent")
+        tools = [
+            duck_duck_go_search_tool, 
+            wiki_search_tool, 
+            save_text_to_file_tool,
+            hr_document_search_tool
+        ]
+        agent = create_agent(
+            model=llm,
+            tools=tools,
+            system_prompt=SYSTEM_PROMPT
+        )
+
+        response = agent.invoke({
             "messages" : [
                 {
                     "role" : "user",
                     "content" : query
                 }
             ]
-        },
-        stream_mode = "updates"
-    )
+        })
 
-    final_structured_response = None
+        print(json.dumps(response, indent=4, default=dict))
 
-    for step in stream:
-        print("\n--- AGENT STEP ---")
-        print(json.dumps(step, indent=4, default=str))
+        messages = response.get("messages", [])
+        if messages : 
+            last_message = messages[-1]
+            content = getattr(last_message, "content", None) or last_message.get("content", "")
+            return {"response": content}
+        
+        return {"error": "The agent did not produce a response. Please try again."}
+    except Exception as e :
+        return {"error": f"Agent failed unexpectedly: {str(e)}"}
 
-        # capture final structured output
-        if "structured_response" in step.get("model", {}):
-            final_structured_response = step["model"]["structured_response"]
-
-    if final_structured_response is None :
-        return {"error" : "Sorry, I can't help you with that right now"}
     
-    if isinstance(final_structured_response, ResponseFormat):
-        print("\n--- FINAL STRUCTURED RESPONSE ---")
-        print(final_structured_response)
-        return final_structured_response.model_dump()
 
-    # If some format other than ResponseFormat Pydantic BaseModel, return as-is
-    return final_structured_response
-
-    # response = agent.invoke({
-    #     "messages" : [
-    #         {
-    #             "role" : "user",
-    #             "content" : query
-    #         }
-    #     ]
-    # })
-
-    # print(json.dumps(response["structured_response"], indent=4, default=dict))
+    
