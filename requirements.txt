@@ -17,4 +17,7 @@ langchain-openai==1.1.10
 pydantic==2.12.5
 wikipedia==1.4.0
 duckduckgo-search==8.1.1
-ddgs==9.11.2
+ddgs==9.11.3
+langchain-elasticsearch==1.0.0
+pymongo==4.16.0
+pypdf==6.8.0

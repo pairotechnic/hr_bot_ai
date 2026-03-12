@@ -1,6 +1,6 @@
 from flask import Flask, render_template
 from extensions import db
-from routes import employee_bp, chat_bp
+from routes import employee_bp, chat_bp, rag_bp
 import os
 
 def create_app():
@@ -10,6 +10,7 @@ def create_app():
     db.init_app(app)
     app.register_blueprint(employee_bp)
     app.register_blueprint(chat_bp)
+    app.register_blueprint(rag_bp)
 
     @app.route("/")
     def index():

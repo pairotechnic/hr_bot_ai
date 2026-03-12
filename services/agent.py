@@ -24,7 +24,7 @@ def ask_agent(query):
         model=model,
         tools=tools,
         response_format=ResponseFormat,
-        # TODO : Update this prompt to reflecct the intended behaviour of the agent
+        # TODO : Update this prompt to reflect the intended behaviour of the agent
         system_prompt="""
             You are an HR automation bot.
             You automate critical HR functions, including support, open enrollment, onboarding, leave of absence, compensation.
