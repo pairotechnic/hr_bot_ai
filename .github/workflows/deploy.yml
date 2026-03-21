@@ -111,38 +111,31 @@ jobs:
             -v \
             ${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }} "echo SSH connection successful"
 
-      - name: Copy docker-compose.yml to VM
+      - name: Write .env file
+        run: |
+          cat > .env << EOF
+          GITHUB_REPOSITORY=${{ github.repository }}
+          IMAGE_TAG=sha-$(echo '${{ github.sha }}' | cut -c1-7)
+          SQL_DATABASE_URI=${{ secrets.SQL_DATABASE_URI }}
+          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          ELASTICSEARCH_URL=${{ secrets.ELASTICSEARCH_URL }}
+          MONGO_URI=${{ secrets.MONGO_URI }}
+          EOF
+
+      - name: Copy docker-compose.yml and .env to VM
         run: |
           scp -o StrictHostKeyChecking=no \
-          -i ~/.ssh/deploy_key \
-          docker-compose.yml \
-          ${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}:/home/deploy/hr_bot_ai/
+            -i ~/.ssh/deploy_key \
+            docker-compose.yml .env \
+            ${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}:/home/deploy/hr_bot_ai/
 
       - name: Deploy on VM
         run: |
-          ssh -i ~/.ssh/deploy_key \
-          ${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }} \
-          "
-            cd /home/deploy/hr_bot_ai
-
-            # Write the .env file from GitHub secrets — never committed to git
-            cat > .env << EOF
-            GITHUB_REPOSITORY=${{ github.repository }}
-            IMAGE_TAG=sha-$(echo '${{ github.sha }}' | cut -c1-7)
-            SQL_DATABASE_URI=${{ secrets.SQL_DATABASE_URI }}
-            OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
-            ELASTICSEARCH_URL=${{ secrets.ELASTICSEARCH_URL }}
-            MONGO_URI=${{ secrets.MONGO_URI }}
-            EOF
-
-            # Log in to ghcr.io so the VM can pull the image
-            echo '${{ secrets.GITHUB_TOKEN }}' | \
-              docker login ghcr.io -u '${{ github.actor }}' --password-stdin
-
-            # Pull new image and restart only changed containers
-            docker compose --env-file .env pull web
-            docker compose --env-file .env up -d --no-build
-
-            # Clean up old images to save disk space (10GB boot disk is tight)
-            docker image prune -f
-          "
+          ssh -o StrictHostKeyChecking=no \
+            -i ~/.ssh/deploy_key \
+            ${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }} \
+            "cd /home/deploy/hr_bot_ai && \
+            echo '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin && \
+            docker compose --env-file .env pull web && \
+            docker compose --env-file .env up -d --no-build && \
+            docker image prune -f"
