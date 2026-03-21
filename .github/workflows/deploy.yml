@@ -126,7 +126,7 @@ jobs:
             cd /home/deploy/hr_bot_ai
 
             # Write the .env file from GitHub secrets — never committed to git
-            cat > .env << 'EOF'
+            cat > .env << EOF
             GITHUB_REPOSITORY=${{ github.repository }}
             IMAGE_TAG=sha-$(echo '${{ github.sha }}' | cut -c1-7)
             SQL_DATABASE_URI=${{ secrets.SQL_DATABASE_URI }}
