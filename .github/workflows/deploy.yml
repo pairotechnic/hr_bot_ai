@@ -116,7 +116,7 @@ jobs:
           scp -o StrictHostKeyChecking=no \
           -i ~/.ssh/deploy_key \
           docker-compose.yml \
-          ${{ secrets.GCP_VM_USER }}@{{ secrets.GCP_VM_HOST }}:/home/deploy/hr_bot_ai/
+          ${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}:/home/deploy/hr_bot_ai/
 
       - name: Deploy on VM
         run: |
