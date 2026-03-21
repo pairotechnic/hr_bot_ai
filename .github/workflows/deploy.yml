@@ -91,6 +91,26 @@ jobs:
           chmod 600 ~/.ssh/deploy_key 
           ssh-keyscan -H ${{ secrets.GCP_VM_HOST }} >> ~/.ssh/known_hosts 
 
+      - name: Debug SSH setup
+        run: |
+          echo "Checking .ssh directory..."
+          ls -la ~/.ssh/
+          echo "Checking key file..."
+          ls -la ~/.ssh/deploy_key
+          echo "Checking key format..."
+          head -1 ~/.ssh/deploy_key
+          tail -1 ~/.ssh/deploy_key
+          echo "Checking known_hosts..."
+          cat ~/.ssh/known_hosts
+
+      - name: Test SSH connection
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            -v \
+            ${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }} "echo SSH connection successful"
+
       - name: Copy docker-compose.yml to VM
         run: |
           scp -i ~/.ssh/deploy_key \
