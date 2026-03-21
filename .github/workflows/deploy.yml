@@ -113,7 +113,8 @@ jobs:
 
       - name: Copy docker-compose.yml to VM
         run: |
-          scp -i ~/.ssh/deploy_key \
+          scp -o StrictHostKeyChecking=no \
+          -i ~/.ssh/deploy_key \
           docker-compose.yml \
           ${{ secrets.GCP_VM_USER }}@{{ secrets.GCP_VM_HOST }}:/home/deploy/hr_bot_ai/
 
