@@ -86,7 +86,7 @@ jobs:
 
       - name: Set up SSH key
         run: | 
-          mkdir -p ~/.SSH
+          mkdir -p ~/.ssh
           echo "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key 
           ssh-keyscan -H ${{ secrets.GCP_VM_HOST }} >> ~/.ssh/known_hosts 
