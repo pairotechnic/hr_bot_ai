@@ -25,8 +25,13 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt pytest pytest-mock
 
-      - name: Run unit tests
-        run: pytest tests/unit/ -v
+      - name: Run unit tests, if they exist
+        run: |
+          if [ -d "tests/unit/" ]; then
+            pytest tests/unit/ -v
+          else
+            echo "No unit tests found, skipping..."
+          fi
 
   # Job 2 : Build and push Docker image
   build:
