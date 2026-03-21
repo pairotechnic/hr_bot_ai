@@ -121,7 +121,7 @@ jobs:
       - name: Deploy on VM
         run: |
           ssh -i ~/.ssh/deploy_key \
-          ${{ secrets.GCP_VM_USER }}@{{ secrets.GCP_VM_HOST }} \
+          ${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }} \
           "
             cd /home/deploy/hr_bot_ai
 
