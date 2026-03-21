@@ -10,7 +10,6 @@ services:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
-    restart: unless-stopped
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
@@ -18,12 +17,11 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false       # disable auth for local dev
-      - ES_JAVA_OPTS=-Xms256m -Xmx256m # Caps the RAM consumed by ElasticSearch container to 256MB, ideal for GCP's e2-micro 1GB RAM VM
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
     ports:
       - "9200:9200"
     volumes:
       - es_data:/usr/share/elasticsearch/data
-    restart: unless-stopped
 
   mongo:
     image: mongo:7
@@ -32,26 +30,19 @@ services:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
-    restart: unless-stopped
 
   web:
-    # The iage is built by GitHub Actions on GitHub's servers
-    # Pushed to ghcr.io
-    # The VM pulls the finished image
-    image: ghcr.io/${GITHUB_REPOSITORY}:${IMAGE_TAG:-latest}
+    build: .
     container_name: hr_bot_web
+
     ports:
       - "5000:5000"
-    environment:
-      - SQL_DATABASE_URI=${SQL_DATABASE_URI}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - ELASTICSEARCH_URL=${ELASTICSEARCH_URL}
-      - MONGO_URI=${MONGO_URI}
+    env_file:
+      - .env.docker
     depends_on:
       - postgres
       - elasticsearch
       - mongo
-    restart: unless-stopped
 
 volumes:
   postgres_data:

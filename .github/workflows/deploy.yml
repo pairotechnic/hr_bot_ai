@@ -1,0 +1,121 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Job 1 : Run Tests
+  test:
+    runs-on: ubuntu-latest
+    steps: 
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pytest pytest-mock
+
+      - name: Run unit tests
+        run: pytest tests/unit/ -v
+
+  # Job 2 : Build and push Docker image
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      image_tag: ${{ steps.meta.outputs.version }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry 
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha, prefix=sha-
+            type=raw, value=latest, enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tag }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha, mode=max
+
+  # Job 3 - Deploy to GCP VM
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up SSH key
+        run: | 
+          mkdir -p ~/.SSH
+          echo "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key 
+          ssh-keyscan -H ${{ secrets.GCP_VM_HOST }} >> ~/.ssh/known_hosts 
+
+      - name: Copy docker-compose.yml to VM
+        run: |
+          scp -i ~/.ssh/deploy_key \
+          docker-compose.yml \
+          ${{ secrets.GCP_VM_USER }}@{{ secrets.GCP_VM_HOST }}:/home/deploy/hr_bot_ai/
+
+      - name: Deploy on VM
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+          ${{ secrets.GCP_VM_USER }}@{{ secrets.GCP_VM_HOST }} \
+          "
+            cd /home/deploy/hr_bot_ai
+
+            # Write the .env file from GitHub secrets — never committed to git
+            cat > .env << 'EOF'
+            GITHUB_REPOSITORY=${{ github.repository }}
+            IMAGE_TAG=sha-$(echo '${{ github.sha }}' | cut -c1-7)
+            SQL_DATABASE_URI=${{ secrets.SQL_DATABASE_URI }}
+            OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+            ELASTICSEARCH_URL=${{ secrets.ELASTICSEARCH_URL }}
+            MONGO_URI=${{ secrets.MONGO_URI }}
+            EOF
+
+            # Log in to ghcr.io so the VM can pull the image
+            echo '${{ secrets.GITHUB_TOKEN }}' | \
+              docker login ghcr.io -u '${{ github.actor }}' --password-stdin
+
+            # Pull new image and restart only changed containers
+            docker compose --env-file .env pull web
+            docker compose --env-file .env up -d --no-build
+
+            # Clean up old images to save disk space (10GB boot disk is tight)
+            docker image prune -f
+          "
